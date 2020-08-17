@@ -1,8 +1,10 @@
 @charset 'utf-8';
-
 html {
     font-family: 'Nanum Gothic Coding', monospace;
 	font-size: 14px;
+}
+body{
+    overflow-x: hidden;
 }
 .container{
     display: flex;
@@ -46,6 +48,12 @@ html {
     top: 44px;
     border-bottom: 0.7px solid #ccc;
 }
+.local-nav.sticky{
+    position: fixed;
+    top:0;
+    background:rgba(255,255,255,0.1);
+    backdrop-filter: saturate(180%) blur(15px);
+}
 
 .local-nav-links {
     
@@ -76,19 +84,24 @@ html {
 }
 .scroll-section{
     padding-top: 50vh;
-    border: 1px solid red;
+    position: relative;
 }
 #scroll-section-0 h1{
     position: relative;
     top:-10vh;
-    font-size: 5em;
+    font-size: 8em;
     text-align: center;
     font-weight: bold;
     z-index: 5;
 }
 #scroll-section-1 p{
     font-size: 1.5rem;
-    color: #ccc;
+    color: #666E72;
+}
+.canvas-caption{
+    margin: -8em auto 0;
+    font-size: 1.5rem;
+    color: #666E72;
 }
 #scroll-section-1 strong{
     font-size: 4rem;
@@ -143,12 +156,17 @@ html {
     display: block;
 }
 #scroll-section-2 .b {
-    top: 15vh;
-    left: 65%;
+    top: 28vh;
+    left: 52%;
 }
 #scroll-section-2 .c {
-    top:30%;
-    left: 50%;
+    top: 30vh;
+    left: 58%;
+}
+#scroll-section-3{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 #scroll-section-0 #scroll-section-0 .sticky-elem,
 #scroll-section-1 #scroll-section-1 .sticky-elem,
@@ -157,4 +175,8 @@ html {
     display:block;
     opacity: 1;
 }
+.blend_image_canvas.sticky{
+    position : fixed;
+    top:0;
 
+}
