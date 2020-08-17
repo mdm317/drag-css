@@ -6,10 +6,49 @@ html {
 body{
     overflow-x: hidden;
 }
+
+.loading{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    background: white;
+    z-index: 100;
+    transition : 1s linear;
+}
+.before-load .loading{
+    opacity: 1;
+}
+@keyframes loading-spin{
+    100% {transform:rotate(360deg);}
+}
+@keyframes loading-circle-ani{
+    0% {stroke-dashoffset:157;}    
+    75% {stroke-dashoffset:-147;}
+    100% {stroke-dashoffset:-157;}
+}
+.loading-circle{
+    width: 54px;
+    height: 54px;
+    animation: loading-spin 3s infinite;
+}
+
+.loading-circle circle{
+    stroke:black;
+    stroke-width: 4;
+    stroke-dasharray: 157;
+    fill: transparent;
+    animation : loading-circle-ani 1s infinite;
+}
+
 .container{
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     max-width: 800px;    /* 나중에 vw vh 로 해볼것 */
     margin: 0 auto;
 }
@@ -168,6 +207,20 @@ body{
     flex-direction: column;
     align-items: center;
 }
+.mid-message {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 0 1rem;
+	font-size: 2rem;
+    color: #888;
+    line-height: 1.8em;
+
+}
+.mid-message strong{
+    color:black;
+    font-size:4em;
+    margin-bottom: 4em;
+}
 #scroll-section-0 #scroll-section-0 .sticky-elem,
 #scroll-section-1 #scroll-section-1 .sticky-elem,
 #scroll-section-2 #scroll-section-2 .sticky-elem,
@@ -178,5 +231,17 @@ body{
 .blend_image_canvas.sticky{
     position : fixed;
     top:0;
+
+}
+.footer{
+    bottom: 0;
+    text-align: center;
+    position: relative;
+    background: coral;
+    width: 100vw;
+    height: 4.2em;
+    transform: translateX();
+    color:wheat;
+    padding: 1.4em;
 
 }

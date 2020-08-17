@@ -3,8 +3,14 @@ const NORMAL = 'normal';
 const OPACITY = "opacity";
 const TRANSLATE_Y = "translateY";
 const CANVAS = 'canvas';
-let loadedImageCount=0;
-const totalImageCount=1262;
+
+
+let currentScene=0;
+let yOffset=0;
+let delayedYoffset=0;
+let preIdx=0;
+let firstCanvasVisit=false;
+
 const imagesInfo = [
     {
         start:6726,
@@ -29,7 +35,6 @@ const imagesInfo = [
         images:[],
     }
 ];
-
 const scenes = [
     {
         type: STICKY,
@@ -45,6 +50,21 @@ const scenes = [
             context: document.querySelector('#video-canvas-0').getContext('2d'), 
         },
         changeStyles:[
+            {
+                target :"canvas",
+                style:CANVAS,
+                ranges:[
+                    {start:0 ,end:1 ,startValue:0 ,endValue:imagesInfo[0].length-1 },
+                ]
+            },
+            {
+                target :"canvas",
+                style:OPACITY,
+                ranges:[
+                    {start:0.85 ,end:0.95 ,startValue:1 ,endValue:0 },
+                    {start:0.95 ,end:1 ,startValue:0 ,endValue:0 },
+                ]
+            },
             {
                 target:"messageA",
                 style:OPACITY,
@@ -112,21 +132,7 @@ const scenes = [
                     {start :0.82, end: 0.9 ,startValue:0 ,endValue:-70}
                 ]
             },
-            {
-                target :"canvas",
-                style:CANVAS,
-                ranges:[
-                    {start:0 ,end:1 ,startValue:0 ,endValue:imagesInfo[0].length-1 },
-                ]
-            },
-            {
-                target :"canvas",
-                style:OPACITY,
-                ranges:[
-                    {start:0.85 ,end:0.95 ,startValue:1 ,endValue:0 },
-                    {start:0.95 ,end:1 ,startValue:0 ,endValue:0 },
-                ]
-            }
+
         ],
     },
     {
@@ -150,7 +156,24 @@ const scenes = [
             canvas : document.querySelector('#video-canvas-2'),
             context : document.querySelector('#video-canvas-2').getContext('2d'),
         },
-        changeStyles:[
+        changeStyles:[{
+                target:"canvas",
+                style:CANVAS,
+                ranges:[
+                    {start:0 ,end:1 ,startValue:0 ,endValue:imagesInfo[2].length-1 },
+                ]
+            },
+            {
+                target :"canvas",
+                style:OPACITY,
+                ranges:[
+
+                    {start:0,end:0.1 ,startValue:0 ,endValue:1 },
+                    {start:0.1,end:0.96 ,startValue:1 ,endValue:1 },
+
+                    {start:0.96 ,end:1 ,startValue:1 ,endValue:0 },
+                ]
+            },
             {
                 target:"messageA",
                 style:OPACITY,
@@ -198,24 +221,7 @@ const scenes = [
                     {start :0.92, end: 1 ,startValue:0 ,endValue:-20}
                 ]
             },
-            {
-                target:"canvas",
-                style:CANVAS,
-                ranges:[
-                    {start:0 ,end:1 ,startValue:0 ,endValue:imagesInfo[2].length-1 },
-                ]
-            },
-            {
-                target :"canvas",
-                style:OPACITY,
-                ranges:[
 
-                    {start:0,end:0.1 ,startValue:0 ,endValue:1 },
-                    {start:0.1,end:0.96 ,startValue:1 ,endValue:1 },
-
-                    {start:0.96 ,end:1 ,startValue:1 ,endValue:0 },
-                ]
-            }
         ],
     },
     {
@@ -274,8 +280,7 @@ const scenes = [
 ];
 
 
-let currentScene=0;
-let yOffset=0;
+
 const isInScope = (a,range)=>{
     const{start, end}= range;
     if(start<=a && a<=end){
@@ -304,7 +309,12 @@ const calcCurrentScene = ()=>{
         scrollY-= scene.scrollHeight;
         cs++;
     }
+    if(currentScene!=cs){
 
+        firstCanvasVisit=true;
+        console.log(firstCanvasVisit);
+        
+    }
     currentScene = cs;
     yOffset = scrollY;
     document.body.setAttribute("id", `scroll-section-${currentScene}`);
@@ -448,11 +458,13 @@ const changeSectionStyle = (dragPercent)=>{
                     }else if(style=== TRANSLATE_Y){
                         scene.objs[target].style.transform = `translateY(${dragPercentRange}%)`;
                     }else if(style=== CANVAS){
-                        const idx = Math.round(dragPercentRange);
-                        const canvasCtx = scene.objs.context;
-                        if(canvasCtx){
-                            canvasCtx.drawImage(imagesInfo[currentScene].images[idx],0,0);
-                        } 
+                        if(firstCanvasVisit){
+                            delayedYoffset=yOffset;
+                            preIdx= -1;
+                            firstCanvasVisit=true;
+                        }
+                        requestAnimationFrame(softVideoPlay);
+                    
                     }else if(style=== "whiteboxpercent"){
                         const canvasCtx =  scenes[currentScene].objs.context;
                         canvasCtx.drawImage(imagesInfo[currentScene].images[0],0,0);
@@ -476,12 +488,13 @@ const loadImage = ()=>{
             for(let i=0;i<imageInfo.length;++i){
                 const image = new Image();
                 image.src = `${imageInfo.imageFolder}/${imageInfo.fileName(imageInfo.start+i)}`;
-                image.onload = ()=>{
+                /* image.onload = ()=>{
                     loadedImageCount++;
                     if(loadedImageCount==totalImageCount){
-                        init();
+                        imageLoaded=true;
                     }
-                }
+                } */ //image가 다 로드 되었는지를 확인 할 수 있는 방법 여기서는 
+                //load 이벤트 리스너를 쓸거기 때문에 필요 x
                 imageInfo.images.push(image); 
             }
         }
@@ -499,11 +512,39 @@ const setNavifix= ()=>{
         document.querySelector('.local-nav').classList.remove('sticky');
     }
 }
+
+
+const softVideoPlay = ()=>{
+
+    if(currentScene!==0 && currentScene!==2)return;
+    delayedYoffset = delayedYoffset+ (yOffset-delayedYoffset)*0.1;
+    const dragPercent = calcScenePercent(currentScene, delayedYoffset);
+    const range = scenes[currentScene].changeStyles[0].ranges[0];
+    const sceneProgressRatio = calcPercentRange(dragPercent, range);
+    const idx = Math.round(sceneProgressRatio);
+    if(preIdx!==idx){
+        const canvasCtx = scenes[currentScene].objs.context;
+        canvasCtx.drawImage(imagesInfo[currentScene].images[idx],0,0); 
+        preIdx=idx;
+        console.log(idx);
+    }
+    id = requestAnimationFrame(softVideoPlay);
+    if(Math.abs(delayedYoffset-yOffset)<1){
+        cancelAnimationFrame(id);
+    }
+}
+const checkLoaded =()=>{
+    if(domContentLoaded && imageLoaded){
+   
+        document.body.classList.remove('before-load');
+    }
+}
 const init= ()=>{
+    loadImage();
     setScenesHeight();
     setImageCenter();
     calcCurrentScene();
-    scenes[3].values.shrinkRatio= drawBlendImageCanvas();
+    scenes[3].values.shrinkRatio= drawBlendImageCanvas();//바꿔야 됨
     drawWhiteBox(scenes[3].values.shrinkRatio); 
     setScene3CanvasValue();
     setionsAnimation();
@@ -514,13 +555,18 @@ const init= ()=>{
         scenes[3].values.shrinkRatio= drawBlendImageCanvas();
         setScene3CanvasValue();
     });
-    document.addEventListener('scroll', ()=>{
+    window.addEventListener('scroll', ()=>{
         setNavifix();        
         calcCurrentScene();
         setionsAnimation();
-    });  
+    }); 
+    window.addEventListener('load',()=>{
+        console.log('hello?')
+        document.body.classList.remove('before-load');  
+    });
+    document.querySelector('.loading').addEventListener('transitionend', ()=>{
+        document.body.removeChild(document.querySelector('.loading'));
+    });
+
 };
-const load = ()=>{
-    loadImage();
-}
-load();
+init();
