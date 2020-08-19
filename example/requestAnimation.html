@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body{
+            height: 500vh;
+        }
+        
+        .b1{
+            position: fixed;
+            top:20vh;
+            max-width: 90vw;
+            height: 100px;
+            background-color:  royalblue;
+        }
+        
+        .b2{
+            position: fixed;
+            top:40vh;
+            max-width: 90vw;
+        
+            height: 100px;
+            background-color:  salmon;
+        }
+        
+        
+    </style>
+</head>
+<body>
+
+
+    <div class="b1"></div>
+    <div class="b2"></div>
+    <script>
+        const b1 = document.querySelector('.b1');
+        const b2 = document.querySelector('.b2');
+
+        let yoffset =0;
+        let delayY =0;
+        let loopStatus = false;
+        window.addEventListener('scroll', 
+        ()=>{
+            yoffset = window.pageYOffset;
+            console.log(loopStatus)
+            if(!loopStatus){
+            requestAnimationFrame(loop);
+            //loop()? 하면 동작 안하는 이유는???? 
+            //어떤 순서를 바꾸면 된다 자바스크립트의 비동기성 동작에 대해 생각해보고
+            //바꾸면 정상적으로 동작한다
+            loopStatus=true;
+            }
+            b2.style.width = `${yoffset}px`;
+        }
+        );
+
+        const loop = ()=>{
+        delayY = delayY + (yoffset-delayY)*0.1;
+        b1.style.width = `${delayY}px`;
+        if(Math.abs(delayY-yoffset)>1){
+            requestAnimationFrame(loop);
+        }else{
+            console.log('once?');
+            loopStatus=false;
+
+        }
+        }
+
+    </script>
+</body>
+</html>

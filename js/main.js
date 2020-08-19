@@ -8,9 +8,13 @@ const CANVAS = 'canvas';
 let currentScene=0;
 let yOffset=0;
 let delayedYoffset=0;
-let preIdx=0;
+let preIdx=-1;
 let firstCanvasVisit=false;
-
+let canvasAnimationActive=true;
+let imageLoaded= false;
+let scrollHeightScenes= 0;
+let loadedImageCount=0;
+let totalImageCount=1262;
 const imagesInfo = [
     {
         start:6726,
@@ -289,6 +293,7 @@ const isInScope = (a,range)=>{
     return false;
 }
 const setScenesHeight = ()=>{
+
     for(let i=0; i< scenes.length;++i){
         if(scenes[i].type=== STICKY){
             scenes[i].scrollHeight = scenes[i].heightNum * window.innerHeight;
@@ -298,23 +303,35 @@ const setScenesHeight = ()=>{
             scenes[i].scrollHeight = scenes[i].objs.container.offsetHeight;
         }
     }
+
 };
 const calcCurrentScene = ()=>{
+
     let scrollY = window.scrollY;
     let cs=0;
+    scrollHeightScenes=0;
     for(let scene of scenes){
         if(scrollY<scene.scrollHeight){
             break;
         }
+        scrollHeightScenes +=  scene.scrollHeight;
         scrollY-= scene.scrollHeight;
         cs++;
     }
     if(currentScene!=cs){
-
         firstCanvasVisit=true;
-        console.log(firstCanvasVisit);
-        
+        //currentScene 은 직전의 신이 된다
+        const keys =Object.keys(scenes[currentScene].objs);
+        for(const key of keys){
+            if(key  === 'context'){
+                continue;
+            }
+            if(scenes[currentScene].objs[key].classList.contains('sticky-elem')){
+                scenes[currentScene].objs[key].style.opacity = '0';
+            }
+        }
     }
+    cs = Math.min(3,cs);
     currentScene = cs;
     yOffset = scrollY;
     document.body.setAttribute("id", `scroll-section-${currentScene}`);
@@ -343,7 +360,21 @@ const drawBlendImageCanvas = ()=>{
     const canvasCtx =  scenes[3].objs.context;
     canvasCtx.drawImage(imagesInfo[3].images[0],0,0);
     const shrinkRatio = window.innerHeight/1080;
+
+    //애플은 1670 1670 사이즈의 사진을 써서 height 에 무조건 맞춘듯
+    // 그리고 비율이 안좋으면 효과를 없애고 그냥 사진 두개를 넣어둠
+    if(shrinkRatio*1920<document.body.offsetWidth){
+        canvasAnimationActive=false;
+        console.log('animation 동작 안하게 할 예정')
+        //return
+    }
+    if(shrinkRatio>1){
+        const offsetTop = shrinkRatio*1080-1080;
+        document.querySelector('#scroll-section-3 p').style.marginBottom = `${offsetTop}px`;
+    }
     scenes[3].objs.canvas.style.transform = `scale(${shrinkRatio})`;
+    drawWhiteBox(shrinkRatio); 
+
     return shrinkRatio;
 }
 const drawWhiteBox = (shrinkRatio, percent=0.15)=>{
@@ -358,6 +389,7 @@ const drawWhiteBox = (shrinkRatio, percent=0.15)=>{
     const whiteboxWidth = percent*document.body.offsetWidth;
 
     const wo = (widthOffset+whiteboxWidth)/shrinkRatio;
+   
     canvasCtx.fillRect(0,0,wo,height);
     canvasCtx.fillRect(width-wo,0,wo,height);
     //계산이 생각한 대로 맞지 않느다 내 계산이 틀린지 계산히 정확한대로 안되는지 알 수 없었따
@@ -367,6 +399,7 @@ const drawWhiteBox = (shrinkRatio, percent=0.15)=>{
 
 }
 const setScene3CanvasValue = ()=>{
+    scenes[3].values.shrinkRatio= drawBlendImageCanvas();
     const scene3 = scenes[3];
     const shrinkRatio =  scene3.values.shrinkRatio;
     const canvas =  scene3.objs.canvas;
@@ -395,7 +428,7 @@ const setScene3CanvasValue = ()=>{
 
 const setionsAnimation = ()=>{
     const dragPercent = calcCurrentScenePercent();
-    let changed = false;
+
     switch(currentScene){
         case 0:
             changeSectionStyle(dragPercent);
@@ -409,17 +442,54 @@ const setionsAnimation = ()=>{
             const scene3 = scenes[3];
             const canvas = scenes[3].objs.canvas;
             const ctx = scenes[3].objs.context;
-            if(dragPercent< scene3.changeStyles[1].ranges[0].start){
+            const defaultScale = scene3.values.shrinkRatio;
+            const newImage = imagesInfo[3].images[1];
+
+            const scene3LastPartMaxShrinkRatio = scene3.changeStyles[2].ranges[0].endValue;
+            if(dragPercent<scene3.changeStyles[0].ranges[0].end){
                 canvas.classList.remove('sticky');
-            }
-            if(isInScope(dragPercent,scene3.changeStyles[1].ranges[0])){
+                canvas.style.marginTop=0;
+                canvas.style.transform= `scale(${defaultScale})`;
+            }else if(dragPercent<scene3.changeStyles[1].ranges[0].end){
+                canvas.style.transform= `scale(${defaultScale})`;
                 canvas.style.marginTop=0;
                 canvas.classList.add('sticky');
                 canvas.style.top =  `${scenes[3].values.top}px`;
-                if(!changed){
-                    drawWhiteBox(   drawBlendImageCanvas(),0);
-                }
-                changed = true;
+      
+                ctx.drawImage(imagesInfo[currentScene].images[0],0,0);
+                // drawWhiteBox( scene3.values.shrinkRatio,0);
+                
+
+                const sy = calcPercentRange(dragPercent, scenes[3].changeStyles[1].ranges[0]);
+                ctx.drawImage(newImage,0,sy,canvas.width,canvas.height,0,sy,canvas.width,canvas.height);
+            }else if(dragPercent<scene3.changeStyles[2].ranges[0].end){
+                //d영역 감소 
+                ctx.drawImage(newImage,0,0,canvas.width,canvas.height,0,0,canvas.width,canvas.height);
+                canvas.style.marginTop=0;
+                canvas.classList.add('sticky');
+                dragPercentRange = calcPercentRange(dragPercent, scene3.changeStyles[2].ranges[0]);
+                canvas.style.transform= `scale(${dragPercentRange})`;
+            }else{
+                canvas.classList.remove('sticky');
+                console.log(scene3.values.marginTop);
+                canvas.style.marginTop= `${scene3.values.marginTop}px`;
+                canvas.style.transform= `scale(${scene3LastPartMaxShrinkRatio})`;
+
+            }
+/*             if(dragPercent< scene3.changeStyles[1].ranges[0].start){
+                canvas.classList.remove('sticky');
+            }
+            //blend animation
+            if(isInScope(dragPercent,scene3.changeStyles[1].ranges[0])){
+                canvas.style.transform= `scale(${scene3.values.shrinkRatio})`;
+                canvas.style.marginTop=0;
+                canvas.classList.add('sticky');
+                canvas.style.top =  `${scenes[3].values.top}px`;
+      
+                ctx.drawImage(imagesInfo[currentScene].images[0],0,0);
+                // drawWhiteBox( scene3.values.shrinkRatio,0);
+                
+
                 const newImage = imagesInfo[3].images[1];
                 const sy = calcPercentRange(dragPercent, scenes[3].changeStyles[1].ranges[0]);
                 ctx.drawImage(newImage,0,sy,canvas.width,canvas.height,0,sy,canvas.width,canvas.height);
@@ -430,16 +500,16 @@ const setionsAnimation = ()=>{
             if(isInScope(dragPercent, scene3.changeStyles[2].ranges[0])){
                 canvas.style.marginTop=0;
                 canvas.classList.add('sticky');
-
+                dragPercentRange = calcPercentRange(dragPercent, scene3.changeStyles[2].ranges[0]);
                 canvas.style.transform= `scale(${dragPercentRange})`;
             }
             if(scene3.changeStyles[2].ranges[0].end<dragPercent){
                 canvas.classList.remove('sticky');
                 canvas.style.marginTop= `${scene3.values.marginTop}px`;
-            }
+            } */
             break;
         default:
-            console.log('no case');
+
     }
 }
 const changeSectionStyle = (dragPercent)=>{
@@ -457,14 +527,6 @@ const changeSectionStyle = (dragPercent)=>{
                         scene.objs[target].style.setProperty("opacity", dragPercentRange);
                     }else if(style=== TRANSLATE_Y){
                         scene.objs[target].style.transform = `translateY(${dragPercentRange}%)`;
-                    }else if(style=== CANVAS){
-                        if(firstCanvasVisit){
-                            delayedYoffset=yOffset;
-                            preIdx= -1;
-                            firstCanvasVisit=true;
-                        }
-                        requestAnimationFrame(softVideoPlay);
-                    
                     }else if(style=== "whiteboxpercent"){
                         const canvasCtx =  scenes[currentScene].objs.context;
                         canvasCtx.drawImage(imagesInfo[currentScene].images[0],0,0);
@@ -488,12 +550,12 @@ const loadImage = ()=>{
             for(let i=0;i<imageInfo.length;++i){
                 const image = new Image();
                 image.src = `${imageInfo.imageFolder}/${imageInfo.fileName(imageInfo.start+i)}`;
-                /* image.onload = ()=>{
+                 image.onload = ()=>{
                     loadedImageCount++;
                     if(loadedImageCount==totalImageCount){
                         imageLoaded=true;
                     }
-                } */ //image가 다 로드 되었는지를 확인 할 수 있는 방법 여기서는 
+                }  //image가 다 로드 되었는지를 확인 할 수 있는 방법 여기서는 
                 //load 이벤트 리스너를 쓸거기 때문에 필요 x
                 imageInfo.images.push(image); 
             }
@@ -505,7 +567,7 @@ const setImageCenter = ()=>{
     scenes[0].objs.canvas.style.transform = `translate3d(-50%,-50%, 0) scale(${ratio})`;
     scenes[2].objs.canvas.style.transform = `translate3d(-50%,-50%, 0) scale(${ratio})`;
 }
-const setNavifix= ()=>{
+const watchNaviFix= ()=>{
     if(window.scrollY>44){
         document.querySelector('.local-nav').classList.add('sticky');
     }else{
@@ -513,24 +575,34 @@ const setNavifix= ()=>{
     }
 }
 
-
+let loopStatus =false;
 const softVideoPlay = ()=>{
-
-    if(currentScene!==0 && currentScene!==2)return;
-    delayedYoffset = delayedYoffset+ (yOffset-delayedYoffset)*0.1;
-    const dragPercent = calcScenePercent(currentScene, delayedYoffset);
+    if(!loopStatus){
+        loopStatus=true;
+        requestAnimationFrame(videoPlayLoop);
+    }
+}
+const videoPlayLoop = ()=>{
+    if(currentScene!==0 && currentScene!==2){
+        delayedYoffset=window.scrollY;
+        loopStatus=false;
+        return;
+    }
+    delayedYoffset = (delayedYoffset)+ (window.scrollY-delayedYoffset)*0.1;
+    const delayedYoffsetScene = delayedYoffset-scrollHeightScenes;
+    const delayDragPercent = calcScenePercent(currentScene, delayedYoffsetScene);
     const range = scenes[currentScene].changeStyles[0].ranges[0];
-    const sceneProgressRatio = calcPercentRange(dragPercent, range);
-    const idx = Math.round(sceneProgressRatio);
+    const delaySceneProgressRatio = calcPercentRange(delayDragPercent, range);
+    const idx = Math.round(delaySceneProgressRatio);
     if(preIdx!==idx){
         const canvasCtx = scenes[currentScene].objs.context;
         canvasCtx.drawImage(imagesInfo[currentScene].images[idx],0,0); 
         preIdx=idx;
-        console.log(idx);
     }
-    id = requestAnimationFrame(softVideoPlay);
-    if(Math.abs(delayedYoffset-yOffset)<1){
-        cancelAnimationFrame(id);
+    if(Math.abs(delayedYoffset-yOffset)>1){
+        requestAnimationFrame(videoPlayLoop);
+    }else{
+        loopStatus=false;
     }
 }
 const checkLoaded =()=>{
@@ -539,34 +611,72 @@ const checkLoaded =()=>{
         document.body.classList.remove('before-load');
     }
 }
+function storePagePosition() {
+    var page_y = window.pageYOffset;
+    localStorage.setItem("page_y", page_y);
+}
+const preY =()=>{
+    let currentPageY;
+    try {
+        currentPageY = localStorage.getItem("page_y");
+        if (currentPageY === undefined) {
+            return;
+        }
+        window.scrollTo( 0, currentPageY );
+    } catch (e) {
+        // no localStorage available
+    }
+}
 const init= ()=>{
-    loadImage();
     setScenesHeight();
+    watchNaviFix();
     setImageCenter();
+    preY();
     calcCurrentScene();
-    scenes[3].values.shrinkRatio= drawBlendImageCanvas();//바꿔야 됨
-    drawWhiteBox(scenes[3].values.shrinkRatio); 
     setScene3CanvasValue();
     setionsAnimation();
-    setNavifix();
+    softVideoPlay();
+    if(currentScene===3){
+        window.scrollTo( 0, scrollHeightScenes );
+    }
     document.addEventListener('resize',()=>{
-        setImageCenter();
+        watchNaviFix();
         setScenesHeight();
-        scenes[3].values.shrinkRatio= drawBlendImageCanvas();
+        setImageCenter();
+        calcCurrentScene();
         setScene3CanvasValue();
+        setionsAnimation();
     });
     window.addEventListener('scroll', ()=>{
-        setNavifix();        
+        watchNaviFix();
+        softVideoPlay();
         calcCurrentScene();
         setionsAnimation();
+
     }); 
-    window.addEventListener('load',()=>{
-        console.log('hello?')
-        document.body.classList.remove('before-load');  
-    });
     document.querySelector('.loading').addEventListener('transitionend', ()=>{
         document.body.removeChild(document.querySelector('.loading'));
     });
+    window.onbeforeunload = function() {
+        storePagePosition();
+    };
 
 };
-init();
+const load = ()=>{
+    let domloaded=false;
+    window.addEventListener('load',()=>{
+        domloaded=true;  
+    });
+    loadImage();
+    const intervalId = setInterval(()=>{
+        if(imageLoaded && domloaded){
+            document.body.classList.remove('before-load');  
+
+            init();
+            
+            clearInterval(intervalId);
+        }
+    },100);
+}
+
+load();
