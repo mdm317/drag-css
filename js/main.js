@@ -293,6 +293,7 @@ const isInScope = (a,range)=>{
     return false;
 }
 const setScenesHeight = ()=>{
+    console.log('resizecallback');
 
     for(let i=0; i< scenes.length;++i){
         if(scenes[i].type=== STICKY){
@@ -627,6 +628,32 @@ const preY =()=>{
         // no localStorage available
     }
 }
+const throttle = (callback,time)=>{
+    let pos = true;
+    return ()=>{
+        if(!pos)return;
+        pos=false;
+        setTimeout(()=>{
+            callback();
+            pos = true;
+        },time);
+    }
+} 
+
+const debounce = (callback,time)=>{
+    let pre= false;
+    let id = 0;
+    return ()=>{
+        if(pre){
+            clearTimeout(id);
+        }
+        id = setTimeout(() => {
+            callback();
+            pre=false;
+        }, time);
+        pre = true;
+    }
+} 
 const init= ()=>{
     setScenesHeight();
     watchNaviFix();
@@ -639,14 +666,24 @@ const init= ()=>{
     if(currentScene===3){
         window.scrollTo( 0, scrollHeightScenes );
     }
-    document.addEventListener('resize',()=>{
+    const debounceFunction  = debounce(()=>{
         watchNaviFix();
         setScenesHeight();
         setImageCenter();
         calcCurrentScene();
         setScene3CanvasValue();
         setionsAnimation();
-    });
+    },100)
+/*     window.addEventListener('resize',()=>{
+        watchNaviFix();
+        setScenesHeight();
+        setImageCenter();
+        calcCurrentScene();
+        setScene3CanvasValue();
+        setionsAnimation();
+    }); */
+    window.addEventListener('resize',debounceFunction);
+
     window.addEventListener('scroll', ()=>{
         watchNaviFix();
         softVideoPlay();
@@ -671,9 +708,7 @@ const load = ()=>{
     const intervalId = setInterval(()=>{
         if(imageLoaded && domloaded){
             document.body.classList.remove('before-load');  
-
-            init();
-            
+            init();   
             clearInterval(intervalId);
         }
     },100);

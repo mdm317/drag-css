@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body{
+            height: 500vh;
+        }
+        
+        div{
+            position: fixed;
+            width: 100px;
+            height: 100px;
+            top:30vh;
+        }
+        .b1{
+            left: 20vw;
+            background-color: salmon;
+        }
+        .b2{
+            left: 40vw;
+        
+            background-color: snow;
+        }
+        .b3{
+            left: 60vw;
+        
+            background-color: thistle;
+        }
+    </style>
+</head>
+<body>
+    <div class="b1"></div>
+    <div class="b2"> </div>
+    <div class="b3"></div>
+
+    <script>
+        let eventCalled=0;
+let throlEventCalled=0;
+let debounceEventCalled=0;
+
+const b1 = document.querySelector('.b1');
+const b2 = document.querySelector('.b2');
+const b3 = document.querySelector('.b3');
+const normalCallback = ()=>{
+    eventCalled++;
+    b1.innerHTML = `normal : ${eventCalled}`
+}
+
+
+const throttle = (callback,time)=>{
+    let pos = true;
+    return ()=>{
+        if(!pos)return;
+        pos=false;
+        setTimeout(()=>{
+            callback();
+            pos = true;
+        },time);
+    }
+} 
+
+const debounce = (callback,time)=>{
+    let pre= false;
+    let id = 0;
+    return ()=>{
+        if(pre){
+            clearTimeout(id);
+        }
+        id = setTimeout(() => {
+            callback();
+            pre=false;
+        }, time);
+        pre = true;
+    }
+} 
+const debounceCallback =     debounce(()=>{
+    debounceEventCalled++;
+    b3.innerHTML= `debou call : ${debounceEventCalled}`
+}, 100);
+const throlCallback =    throttle(()=>{
+    throlEventCalled++;
+    b2.innerHTML= `throl call : ${throlEventCalled}`}, 100);
+window.addEventListener('scroll', ()=>{
+    normalCallback();
+    throlCallback();
+    debounceCallback();
+});
+
+
+
+    </script>
+</body>
+</html>
